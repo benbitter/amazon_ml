@@ -1,0 +1,12 @@
+# Ignore datasets & zipped archives
+*.zip
+*.tar.gz
+amazon_dataset/
+dataset/
+
+# Ignore Conda / Python artifacts
+.env
+.venv
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
