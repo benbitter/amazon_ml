@@ -72,12 +72,12 @@ def main():
     
     usecols = ['entity_id', 'business_name', 'business_address', 'country']
     
-    # 1. Load subset of training data for fast feature extraction
+    # 1. Load full training data since the server has 128GB RAM!
     print("Loading training data...")
-    s1_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source1.tsv'), sep='\t', usecols=usecols, dtype=str, nrows=100000)
-    s2_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source2.tsv'), sep='\t', usecols=usecols, dtype=str, nrows=300000)
-    s3_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source3.tsv'), sep='\t', usecols=usecols, dtype=str, nrows=300000)
-    gt = pd.read_csv(os.path.join(data_dir, 'train', 'train_ground_truth.tsv'), sep='\t', dtype=str, nrows=100000)
+    s1_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source1.tsv'), sep='\t', usecols=usecols, dtype=str)
+    s2_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source2.tsv'), sep='\t', usecols=usecols, dtype=str)
+    s3_tr = pd.read_csv(os.path.join(data_dir, 'train', 'train_source3.tsv'), sep='\t', usecols=usecols, dtype=str)
+    gt = pd.read_csv(os.path.join(data_dir, 'train', 'train_ground_truth.tsv'), sep='\t', dtype=str)
     
     s1_tr['norm_name'] = normalize_name(s1_tr['business_name'])
     s2_tr['norm_name'] = normalize_name(s2_tr['business_name'])
@@ -93,8 +93,9 @@ def main():
     pos_df['target'] = 1
     
     # Prepare HARD Negative Pairs via Blocking
-    print("Generating HARD Negatives for training...")
-    train_candidates = create_blocks(s1_tr, s23_tr)
+    print("Generating HARD Negatives for training (using 100k sample)...")
+    s1_tr_sample = s1_tr.sample(n=100000, random_state=42)
+    train_candidates = create_blocks(s1_tr_sample, s23_tr)
     # Remove true positives from candidates to get hard negatives
     merged_check = train_candidates.merge(pos_df[['entity_id_1', 'entity_id_2', 'target']], on=['entity_id_1', 'entity_id_2'], how='left')
     hard_negatives = merged_check[merged_check['target'].isna()].copy()
