@@ -112,9 +112,32 @@ def main():
     s2['norm_name'] = normalize_name(s2['business_name'])
     s3['norm_name'] = normalize_name(s3['business_name'])
     
-    print("Blocking...")
     s23_test = pd.concat([s2, s3])
-    candidates = s1.merge(s23_test, on='norm_name', suffixes=('_1', '_2'))
+    
+    # Create additional blocking keys for high recall
+    s1['sorted_name'] = s1['norm_name'].apply(lambda x: " ".join(sorted(x.split())))
+    s23_test['sorted_name'] = s23_test['norm_name'].apply(lambda x: " ".join(sorted(x.split())))
+    
+    s1['no_space_name'] = s1['norm_name'].str.replace(' ', '')
+    s23_test['no_space_name'] = s23_test['norm_name'].str.replace(' ', '')
+    
+    s1_addr = s1[s1['business_address'].notna()].copy()
+    s23_addr = s23_test[s23_test['business_address'].notna()].copy()
+    
+    print("Blocking Phase 1: Exact Normalized Name...")
+    cand1 = s1.merge(s23_test, on='norm_name', suffixes=('_1', '_2'))
+    
+    print("Blocking Phase 2: Sorted Words (Transpositions)...")
+    cand2 = s1[s1['sorted_name'] != ""].merge(s23_test[s23_test['sorted_name'] != ""], on='sorted_name', suffixes=('_1', '_2'))
+    
+    print("Blocking Phase 3: No Space Name...")
+    cand3 = s1[s1['no_space_name'] != ""].merge(s23_test[s23_test['no_space_name'] != ""], on='no_space_name', suffixes=('_1', '_2'))
+    
+    print("Blocking Phase 4: Exact Address...")
+    cand4 = s1_addr.merge(s23_addr, on='business_address', suffixes=('_1', '_2'))
+    
+    print("Combining candidates...")
+    candidates = pd.concat([cand1, cand2, cand3, cand4]).drop_duplicates(subset=['entity_id_1', 'entity_id_2'])
     
     print("Extracting features for test candidates...")
     X_test = extract_features(candidates)
